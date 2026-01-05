@@ -1,0 +1,56 @@
+type Meeting {
+  id: ID!
+  meetingId: ID! # Alias for id to support subscription filtering
+  goal: String!
+  rules: [String]
+  startTime: String
+  duration: Int
+  status: String
+  boardContent: String # JSON string
+}
+
+type Message {
+  meetingId: ID!
+  messageId: ID!
+  senderId: String!
+  senderName: String!
+  content: String!
+  type: String! # TEXT, SYSTEM, PROPOSAL
+  createdAt: String!
+  reactions: String # JSON string
+}
+
+type Query {
+  getMeeting(id: ID!): Meeting
+  getMessages(meetingId: ID!): [Message]
+}
+
+type Mutation {
+  createMeeting(goal: String!, rules: [String], duration: Int!): Meeting
+  sendMessage(
+    meetingId: ID!
+    senderId: String!
+    senderName: String!
+    content: String!
+  ): Message
+  addReaction(meetingId: ID!, messageId: ID!, reactionType: String!): Message
+
+  # Internal use by AI (protected by IAM)
+  updateBoard(meetingId: ID!, content: String!): Meeting
+  postFacilitation(meetingId: ID!, content: String!, type: String!): Message
+}
+
+type Subscription {
+  onMessage(meetingId: ID!): Message
+    @aws_subscribe(
+      mutations: ["sendMessage", "postFacilitation", "addReaction"]
+    )
+  onBoardUpdate(meetingId: ID!): Meeting
+    @aws_subscribe(mutations: ["updateBoard"])
+}
+
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
