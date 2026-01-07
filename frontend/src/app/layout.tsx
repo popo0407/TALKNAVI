@@ -27,6 +27,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="/aws-exports.js"></script>
         {children}
       </body>
     </html>

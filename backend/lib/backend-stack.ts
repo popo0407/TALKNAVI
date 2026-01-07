@@ -36,7 +36,7 @@ export class BackendStack extends cdk.Stack {
     // 2. AppSync API
     const api = new appsync.GraphqlApi(this, 'TalkNaviApi', {
       name: 'talknavi-api',
-      schema: appsync.SchemaFile.fromAsset(path.join(__dirname, '../graphql/schema.graphql')),
+      definition: appsync.Definition.fromFile(path.join(__dirname, '../graphql/schema.graphql')),
       authorizationConfig: {
         defaultAuthorization: {
           authorizationType: appsync.AuthorizationType.API_KEY,
@@ -226,9 +226,15 @@ export class BackendStack extends cdk.Stack {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
     });
 
+    const config = {
+      NEXT_PUBLIC_GRAPHQL_ENDPOINT: api.graphqlUrl,
+      NEXT_PUBLIC_REGION: this.region,
+      NEXT_PUBLIC_GRAPHQL_API_KEY: api.apiKey,
+    };
+
     const distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultBehavior: {
-        origin: new origins.S3Origin(websiteBucket),
+        origin: origins.S3BucketOrigin.withOriginAccessControl(websiteBucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
       defaultRootObject: 'index.html',
@@ -242,7 +248,10 @@ export class BackendStack extends cdk.Stack {
     });
 
     new s3deploy.BucketDeployment(this, 'DeployWebsite', {
-      sources: [s3deploy.Source.asset(path.join(__dirname, '../../frontend/out'))],
+      sources: [
+        s3deploy.Source.asset(path.join(__dirname, '../../frontend/out')),
+        s3deploy.Source.data('aws-exports.js', `window.TALKNAVI_CONFIG = ${JSON.stringify(config)};`),
+      ],
       destinationBucket: websiteBucket,
       distribution,
       distributionPaths: ['/*'],
